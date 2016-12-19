@@ -29,13 +29,13 @@ func Transerf(server string, file string, relative_path string) error {
 	}
 
 	defer conn.Close()
-	conn.Write([]byte(fmt.Sprintf("%s %d %s\r\n", fi.Name(), fi.Size(), relative_path)))
+	conn.Write([]byte(fmt.Sprintf("%s@%d@%s\r\n", fi.Name(), fi.Size(), relative_path)))
 	io.Copy(conn, f);
 
 	buff := make([]byte, 1024)
 	n, err := conn.Read(buff)
 	if err == nil {
-		fmt.Printf("Server Response %s\n", strings.Trim(string(buff[:n]), "\r\n"))
+		fmt.Printf("Server Response `%s`\n", strings.Trim(string(buff[:n]), "\r\n"))
 	}
 
 	return nil

@@ -16,7 +16,7 @@ var optionIsServer   = flag.Bool("server", false, "run as server mode")
 var optionIsClient   = flag.Bool("client", true, "run as client mode")
 var optionClientFile = flag.String("file", "", "set send file to server")
 var optionClientPath = flag.String("path", "", "set send file to server backup path")
-var optionVerbose    = flag.Bool("verbose", true, `show run details`)
+var optionVerbose    = flag.Bool("verbose", false, `show run details`)
 
 func usage() {
 	fmt.Printf("Usage: %s [options]\nOptions:\n", os.Args[0])

@@ -8,6 +8,8 @@ import (
 	"bufio"
 	"os"
 	"path/filepath"
+	"strings"
+	"strconv"
 )
 
 type Server struct {
@@ -87,10 +89,10 @@ func (srv *Server)acceptConn() error {
 
 func (srv *Server) handleConn(conn net.Conn) error {
 	var clientAddr = conn.RemoteAddr().String()
-	Debugf("client %s connected", clientAddr)
+	Debugf("%s connected", clientAddr)
 
 	defer func() {
-		Debugf("client %s disconnected", clientAddr)
+		Debugf("%s disconnected", clientAddr)
 		conn.Close()
 	}()
 
@@ -100,20 +102,38 @@ func (srv *Server) handleConn(conn net.Conn) error {
 	r := bufio.NewReader(conn)
 	content, err := r.ReadString('\n')
 	if err != nil {
-		Debugf("handleConn occur error %v", err)
+		Debugf("%s parse transfer header failed %v", clientAddr, err)
 		return err
 	}
 
-	fname := ""
+	summaryInfo := strings.Split(strings.Trim(content, "\r\n"), "@")
+	summaryLen := len(summaryInfo)
+	if summaryLen < 3 {
+		Debugf("%s parse transfer header failed %s", clientAddr, content)
+		conn.Write([]byte("parse transfer header failed\r\n"))
+		return errors.New("parse transfer header failed")
+	}
+
+	fpath := summaryInfo[summaryLen - 1]
 	fsize := 0
-	fpath := ""
 
-	if _, err := fmt.Sscanf(content, "%s %d %s\r\n", &fname, &fsize, &fpath); err != nil {
-		Debugf("handleConn occur error %v", err)
-		return err
+	if len(summaryInfo[summaryLen - 2]) > 0 {
+		num, err := strconv.Atoi(summaryInfo[summaryLen - 2])
+		if err != nil {
+			Debugf("%s parse transfer header failed %s %s", clientAddr, content, err)
+			conn.Write([]byte("parse transfer header failed error size\r\n"))
+			return err
+		}
+		fsize = num
 	}
 
-	Debugf("start recevie %v file %s", clientAddr, fname)
+	if fsize == 0 {
+		Debugf("%s parse transfer header failed %s error size", clientAddr, content)
+		conn.Write([]byte("parse transfer header failed error size\r\n"))
+		return errors.New("parse transfer header failed error size")
+	}
+
+	fname := strings.Join(summaryInfo[:summaryLen - 2], "")
 
 	fileName := ""
 	if len(fpath) > 0 {
@@ -122,20 +142,22 @@ func (srv *Server) handleConn(conn net.Conn) error {
 		fileName = fmt.Sprintf("%s%s", srv.backupPath, fname)
 	}
 
+	Debugf("%s backup file %s size %d", clientAddr, fileName, fsize)
+
 	parentDir := filepath.Dir(fileName)
 	if _, err := os.Stat(parentDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(parentDir, 0755); err != nil {
-			Debugf("creaet folder %s failed %v", parentDir, err)
+			Debugf("%s creaet folder %s failed %v", clientAddr, parentDir, err)
 			return err
 		}
 	} else if _, err := os.Stat(fileName); err == nil {
-		Debugf("target file %s exists", fileName)
+		Debugf("%s target file %s exists", clientAddr, fileName)
 		os.Remove(fileName)
 	}
 
 	f, err := os.OpenFile(fileName, os.O_CREATE | os.O_WRONLY | os.O_APPEND, 0644)
 	if err != nil {
-		Debugf("handleConn occur error %v", err)
+		Debugf("%s open file %s failed %v", clientAddr, fileName, err)
 		return err
 	}
 
