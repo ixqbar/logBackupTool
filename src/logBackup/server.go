@@ -94,9 +94,9 @@ func (srv *Server) handleConn(conn net.Conn) error {
 		conn.Close()
 	}()
 
-	//file\r\n
+	//file size path\r\n
 	//data
-
+	conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(30)))
 	r := bufio.NewReader(conn)
 	content, err := r.ReadString('\n')
 	if err != nil {
@@ -145,6 +145,7 @@ func (srv *Server) handleConn(conn net.Conn) error {
 
 	m := 0
 	for {
+		conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(180)))
 		n, err := r.Read(data)
 		if err != nil {
 			break;
