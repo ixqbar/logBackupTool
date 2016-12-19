@@ -4,16 +4,16 @@
 ```
 Usage: ./logBackupTool [options]
 Options:
-  -c string
+  -config string
     	config (default "/etc/logBackup.conf")
   -file string
     	send file to server
-  -mc
+  -server
     	run as server mode (default false)
-  -ms
-    	run as client mode (default true)
+  -client
+    	set run as client mode (default true)
   -path string
-    	send file to server backup path
+    	set send file to server backup path
   -verbose
     	show run details (default true)
 ```
@@ -30,12 +30,12 @@ server-address=127.0.0.1:2010
 
 ## server
 ```
-./logBackupTool -c ../conf/logBackup.conf -ms
+./logBackupTool --config ../conf/logBackup.conf --server
 ```
 
 ## client
 ```
-./logBackupTool --file test.log --path data/your_path
+./logBackupTool --file test.log --path server_save_path
 ```
 
 ### FAQ

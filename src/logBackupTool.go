@@ -11,11 +11,11 @@ import (
 	"strings"
 )
 
-var optionConfig     = flag.String("c", "/etc/logBackup.conf", "config")
-var optionIsServer   = flag.Bool("ms", false, "run as server mode")
-var optionIsClient   = flag.Bool("mc", true, "run as client mode")
-var optionClientFile = flag.String("file", "", "send file to server")
-var optionClientPath = flag.String("path", "", "send file to server root path")
+var optionConfig     = flag.String("config", "/etc/logBackup.conf", "config")
+var optionIsServer   = flag.Bool("server", false, "run as server mode")
+var optionIsClient   = flag.Bool("client", true, "run as client mode")
+var optionClientFile = flag.String("file", "", "set send file to server")
+var optionClientPath = flag.String("path", "", "set send file to server backup path")
 var optionVerbose    = flag.Bool("verbose", true, `show run details`)
 
 func usage() {
@@ -36,7 +36,7 @@ func main()  {
 
 	file, err := logBackup.LoadFile(*optionConfig)
 	if err != nil {
-		fmt.Printf("Sorry,config file not right %s %v\n", *optionConfig, err)
+		fmt.Printf("%v\n", err)
 		os.Exit(1)
 	}
 
