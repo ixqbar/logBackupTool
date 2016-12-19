@@ -96,6 +96,11 @@ func main()  {
 				os.Exit(1)
 			}
 
+			if strings.Index(saveRelativePath, "@") >= 0 {
+				fmt.Printf("Sorry, transfer file path is invalide\n")
+				os.Exit(1)
+			}
+
 			if strings.HasPrefix(saveRelativePath, "/") {
 				saveRelativePath = saveRelativePath[1:]
 			}

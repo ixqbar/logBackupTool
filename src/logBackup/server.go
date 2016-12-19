@@ -133,7 +133,7 @@ func (srv *Server) handleConn(conn net.Conn) error {
 		return errors.New("parse transfer header failed error size")
 	}
 
-	fname := strings.Join(summaryInfo[:summaryLen - 2], "")
+	fname := strings.Trim(strings.Join(summaryInfo[:summaryLen - 2], "@"), "@")
 
 	fileName := ""
 	if len(fpath) > 0 {
