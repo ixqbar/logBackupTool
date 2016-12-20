@@ -24,3 +24,7 @@ _testmain.go
 *.prof
 .idea
 .idea/*
+src/github.com
+src/gopkg.in
+bin
+src/logBackupTool

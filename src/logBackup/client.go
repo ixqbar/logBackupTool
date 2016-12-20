@@ -4,8 +4,8 @@ import (
 	"net"
 	"fmt"
 	"os"
-	"io"
 	"strings"
+	"gopkg.in/cheggaaa/pb.v1"
 )
 
 func Transerf(server string, file string, relative_path string) error {
@@ -30,7 +30,27 @@ func Transerf(server string, file string, relative_path string) error {
 
 	defer conn.Close()
 	conn.Write([]byte(fmt.Sprintf("%s@%d@%s\r\n", fi.Name(), fi.Size(), relative_path)))
-	io.Copy(conn, f);
+
+	bar := pb.New64(fi.Size())
+	bar.Start()
+
+	buf := make([]byte, 1024)
+	for {
+		nr, er := f.Read(buf)
+		if nr > 0 {
+			nw, ew := conn.Write(buf[0:nr])
+			if ew != nil {
+				break
+			}
+
+			bar.Add(nw)
+		}
+		if er != nil {
+			break
+		}
+	}
+
+	bar.Finish()
 
 	buff := make([]byte, 1024)
 	n, err := conn.Read(buff)
