@@ -38,5 +38,8 @@ server-address=127.0.0.1:2010
 ./logBackupTool --file test.log --path server_save_path
 ```
 
+## snapshoot
+![](./logBackupToolDemo.gif)
+
 ### FAQ
 更多疑问请+qq群 233415606 or [website http://www.hnphper.com](http://www.hnphper.com)
