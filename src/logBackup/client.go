@@ -8,7 +8,7 @@ import (
 	"gopkg.in/cheggaaa/pb.v1"
 )
 
-func Transerf(server string, file string, relative_path string) error {
+func Transerf(server string, file string, path string, name string) error {
 	fi, err := os.Stat(file)
 	if err != nil || fi.IsDir() {
 		fmt.Printf("Sorry,not found transfer file %s\n", file)
@@ -29,7 +29,12 @@ func Transerf(server string, file string, relative_path string) error {
 	}
 
 	defer conn.Close()
-	conn.Write([]byte(fmt.Sprintf("%s@%d@%s\r\n", fi.Name(), fi.Size(), relative_path)))
+
+	if len(name) == 0 {
+		conn.Write([]byte(fmt.Sprintf("%s@%d@%s\r\n", fi.Name(), fi.Size(), path)))
+	} else {
+		conn.Write([]byte(fmt.Sprintf("%s@%d@%s\r\n", name, fi.Size(), path)))
+	}
 
 	bar := pb.New64(fi.Size())
 	bar.Start()

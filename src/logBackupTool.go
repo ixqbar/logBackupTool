@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 	"strings"
+	"regexp"
 )
 
 var optionConfig     = flag.String("config", "/etc/logBackup.conf", "config")
@@ -16,6 +17,7 @@ var optionIsServer   = flag.Bool("server", false, "run as server mode")
 var optionIsClient   = flag.Bool("client", true, "run as client mode")
 var optionClientFile = flag.String("file", "", "set send file to server")
 var optionClientPath = flag.String("path", "", "set send file to server backup path")
+var optionClientName = flag.String("name", "", "rename send file to server backup path")
 var optionVerbose    = flag.Bool("verbose", false, `show run details`)
 
 func usage() {
@@ -91,12 +93,7 @@ func main()  {
 
 		saveRelativePath := *optionClientPath
 		if len(saveRelativePath) > 0 {
-			if strings.Index(saveRelativePath, ".") >= 0 {
-				fmt.Printf("Sorry, transfer file path is invalide\n")
-				os.Exit(1)
-			}
-
-			if strings.Index(saveRelativePath, "@") >= 0 {
+			if matched,err := regexp.Match(`^[0-9a-zA-Z\-_]{1,}$`, []byte(saveRelativePath)); err != nil || !matched {
 				fmt.Printf("Sorry, transfer file path is invalide\n")
 				os.Exit(1)
 			}
@@ -110,13 +107,20 @@ func main()  {
 			}
 		}
 
+		if len(*optionClientName) > 0 {
+			if matched,err := regexp.Match(`^[0-9a-zA-Z\-_.]{1,}$`, []byte(*optionClientName)); err != nil || !matched {
+				fmt.Printf("Sorry, transfer file name is invalide\n")
+				os.Exit(1)
+			}
+		}
+
 		addr, ok := file.Get("client", "server-address")
 		if !ok {
 			fmt.Printf("Sorry,config file not right %s\n", *optionConfig)
 			os.Exit(1)
 		}
 
-		logBackup.Transerf(addr, *optionClientFile, saveRelativePath)
+		logBackup.Transerf(addr, *optionClientFile, saveRelativePath, *optionClientName)
 	}
 
 	os.Exit(0)

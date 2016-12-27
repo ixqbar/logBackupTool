@@ -4,18 +4,20 @@
 ```
 Usage: ./logBackupTool [options]
 Options:
+  -client
+    	run as client mode (default true)
   -config string
     	config (default "/etc/logBackup.conf")
   -file string
-    	send file to server
-  -server
-    	run as server mode (default false)
-  -client
-    	set run as client mode (default true)
+    	set send file to server
+  -name string
+    	rename send file to server backup path
   -path string
     	set send file to server backup path
+  -server
+    	run as server mode
   -verbose
-    	show run details (default true)
+    	show run details
 ```
 
 ### logBackup.conf
