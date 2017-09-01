@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"strconv"
+	"io"
+	"path"
 )
 
 type Server struct {
@@ -37,6 +39,7 @@ func (srv *Server) Start() error {
 
 	sock, err := net.ListenTCP("tcp", addr)
 	if err != nil {
+		Debugf("server run %s failed %s", srv.addr, err)
 		return fmt.Errorf("fail to listen tcp: %v", err)
 	}
 
@@ -87,7 +90,7 @@ func (srv *Server)acceptConn() error {
 	return nil
 }
 
-func (srv *Server) handleConn(conn net.Conn) error {
+func (srv *Server) handleConn(conn net.Conn) {
 	var clientAddr = conn.RemoteAddr().String()
 	Debugf("%s connected", clientAddr)
 
@@ -98,89 +101,98 @@ func (srv *Server) handleConn(conn net.Conn) error {
 
 	//file size path\r\n
 	//data
-	conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(30)))
-	r := bufio.NewReader(conn)
-	content, err := r.ReadString('\n')
-	if err != nil {
-		Debugf("%s parse transfer header failed %v", clientAddr, err)
-		return err
-	}
-
-	summaryInfo := strings.Split(strings.Trim(content, "\r\n"), "@")
-	summaryLen := len(summaryInfo)
-	if summaryLen < 3 {
-		Debugf("%s parse transfer header failed %s", clientAddr, content)
-		conn.Write([]byte("parse transfer header failed\r\n"))
-		return errors.New("parse transfer header failed")
-	}
-
-	fpath := summaryInfo[summaryLen - 1]
-	fsize := 0
-
-	if len(summaryInfo[summaryLen - 2]) > 0 {
-		num, err := strconv.Atoi(summaryInfo[summaryLen - 2])
-		if err != nil {
-			Debugf("%s parse transfer header failed %s %s", clientAddr, content, err)
-			conn.Write([]byte("parse transfer header failed error size\r\n"))
-			return err
-		}
-		fsize = num
-	}
-
-	if fsize == 0 {
-		Debugf("%s parse transfer header failed %s error size", clientAddr, content)
-		conn.Write([]byte("parse transfer header failed error size\r\n"))
-		return errors.New("parse transfer header failed error size")
-	}
-
-	fname := strings.Trim(strings.Join(summaryInfo[:summaryLen - 2], "@"), "@")
-
-	fileName := ""
-	if len(fpath) > 0 {
-		fileName = fmt.Sprintf("%s%s%s", srv.backupPath, fpath, fname)
-	} else {
-		fileName = fmt.Sprintf("%s%s", srv.backupPath, fname)
-	}
-
-	Debugf("%s backup file %s size %d", clientAddr, fileName, fsize)
-
-	parentDir := filepath.Dir(fileName)
-	if _, err := os.Stat(parentDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(parentDir, 0755); err != nil {
-			Debugf("%s creaet folder %s failed %v", clientAddr, parentDir, err)
-			return err
-		}
-	} else if _, err := os.Stat(fileName); err == nil {
-		Debugf("%s target file %s exists", clientAddr, fileName)
-		os.Remove(fileName)
-	}
-
-	f, err := os.OpenFile(fileName, os.O_CREATE | os.O_WRONLY | os.O_APPEND, 0644)
-	if err != nil {
-		Debugf("%s open file %s failed %v", clientAddr, fileName, err)
-		return err
-	}
-
-	defer f.Close()
-
-	data := make([]byte, 1024)
-
-	m := 0
 	for {
-		conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(180)))
-		n, err := r.Read(data)
-		if err != nil {
-			break;
-		}
+		conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(30)))
 
-		f.Write(data[:n])
-		m +=n
-		if m >= fsize {
+		r := bufio.NewReader(conn)
+		content, err := r.ReadString('\n')
+		if err != nil {
+			if err != io.EOF {
+				Debugf("%s parse transfer header failed %v", clientAddr, err)
+			}
 			break
 		}
+
+		summaryInfo := strings.Split(strings.Trim(content, "\r\n"), "@")
+		summaryLen := len(summaryInfo)
+		if summaryLen < 3 {
+			if summaryInfo[0] == "PING" {
+				conn.Write([]byte("PONG\r\n"))
+				continue
+			} else {
+				Debugf("%s parse transfer header failed %s", clientAddr, content)
+				conn.Write([]byte("parse transfer header failed\r\n"))
+				break
+			}
+		}
+
+		fpath := summaryInfo[summaryLen-1]
+		fsize := 0
+
+		if len(summaryInfo[summaryLen-2]) > 0 {
+			num, err := strconv.Atoi(summaryInfo[summaryLen-2])
+			if err != nil {
+				Debugf("%s parse transfer header failed %s %s", clientAddr, content, err)
+				conn.Write([]byte("parse transfer header failed error size\r\n"))
+				break
+			}
+			fsize = num
+		}
+
+		if fsize == 0 {
+			Debugf("%s parse transfer header failed %s error size", clientAddr, content)
+			conn.Write([]byte("parse transfer header failed error size\r\n"))
+			break
+		}
+
+		fname := strings.Trim(strings.Join(summaryInfo[:summaryLen-2], "@"), "@")
+
+		fileName := ""
+		if len(fpath) > 0 {
+			fileName = path.Join(srv.backupPath, fpath, fname)
+		} else {
+			fileName = path.Join(srv.backupPath, fname)
+		}
+
+		Debugf("%s backup file %s size %d", clientAddr, fileName, fsize)
+
+		parentDir := filepath.Dir(fileName)
+		if _, err := os.Stat(parentDir); os.IsNotExist(err) {
+			if err := os.MkdirAll(parentDir, 0755); err != nil {
+				Debugf("%s creaet folder %s failed %v", clientAddr, parentDir, err)
+				break
+			}
+		} else if _, err := os.Stat(fileName); err == nil {
+			Debugf("%s target file %s exists", clientAddr, fileName)
+			os.Remove(fileName)
+		}
+
+		f, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		if err != nil {
+			Debugf("%s open file %s failed %v", clientAddr, fileName, err)
+			break
+		}
+
+		data := make([]byte, 1024)
+
+		m := 0
+		for {
+			conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(180)))
+			n, err := r.Read(data)
+			if err != nil {
+				break;
+			}
+
+			f.Write(data[:n])
+			m += n
+			if m >= fsize {
+				break
+			}
+		}
+
+		f.Close()
+
+		conn.Write([]byte("OK\r\n"))
 	}
 
-	conn.Write([]byte("OK\r\n"))
-
-	return nil
 }

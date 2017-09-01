@@ -19,12 +19,11 @@ _cgo_export.*
 
 _testmain.go
 
-*.exe
 *.test
 *.prof
+github.com
+golang.org
+gopkg.in
 .idea
-.idea/*
-src/github.com
-src/gopkg.in
 bin
-src/logBackupTool
+logs
