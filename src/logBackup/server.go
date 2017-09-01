@@ -150,7 +150,7 @@ func (srv *Server) handleConn(conn net.Conn) {
 
 		parentDir := filepath.Dir(fileName)
 		if _, err := os.Stat(parentDir); os.IsNotExist(err) {
-			if err := os.MkdirAll(parentDir, 0755); err != nil {
+			if err := os.MkdirAll(parentDir, GloablConfig.Perm); err != nil {
 				Debugf("%s creaet folder %s failed %v", clientAddr, parentDir, err)
 				break
 			}
@@ -159,7 +159,7 @@ func (srv *Server) handleConn(conn net.Conn) {
 			os.Remove(fileName)
 		}
 
-		f, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0755)
+		f, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, GloablConfig.Perm)
 		if err != nil {
 			Debugf("%s open file %s failed %v", clientAddr, fileName, err)
 			break

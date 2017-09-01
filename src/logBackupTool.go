@@ -74,13 +74,13 @@ func main() {
 
 			u, err := user.Lookup(userStr)
 			if err != nil {
-				fmt.Printf("Sorry,not found user %s in your machine\n", userStr)
+				fmt.Printf("Sorry,not found user %s in your machine %s\n", userStr, err)
 				return
 			}
 
 			uid, err := strconv.Atoi(u.Uid)
 			if err != nil {
-				fmt.Printf("Sorry,convert %s to type int failed %s \n", userStr, err)
+				fmt.Printf("Sorry,convert %s to type int failed %s\n", userStr, err)
 				return
 			}
 
@@ -92,13 +92,13 @@ func main() {
 
 			g, err := user.LookupGroup(groupStr)
 			if err != nil {
-				fmt.Printf("Sorry,not found group %s in your machine\n", groupStr)
+				fmt.Printf("Sorry,not found group %s in your machine %s\n", groupStr, err)
 				return
 			}
 
 			gid, err := strconv.Atoi(g.Gid)
 			if err != nil {
-				fmt.Printf("Sorry,convert %s to type int failed %s \n", userStr, err)
+				fmt.Printf("Sorry,convert %s to type int failed %s\n", groupStr, err)
 				return
 			}
 
@@ -107,7 +107,23 @@ func main() {
 			logBackup.GloablConfig.Gid = gid
 		}()
 
-		logBackup.Debugf("server will chown by %d:%d", logBackup.GloablConfig.Uid, logBackup.GloablConfig.Uid)
+		func(){
+			permStr, ok := file.Get("server", "perm")
+			if !ok {
+				fmt.Printf("Sorry,config file not right %s with perm\n", *optionConfig)
+				return
+			}
+
+			perm, err := strconv.ParseInt(permStr, 0, 32)
+			if err != nil {
+				fmt.Printf("Sorry,convert %s to type int failed %s \n", permStr, err)
+				return
+			}
+
+			logBackup.GloablConfig.Perm = os.FileMode(perm)
+		}()
+
+		logBackup.Debugf("server will backup file permissions with %d:%d %s", logBackup.GloablConfig.Uid, logBackup.GloablConfig.Uid, logBackup.GloablConfig.Perm)
 
 		server, err := logBackup.NewServer()
 
