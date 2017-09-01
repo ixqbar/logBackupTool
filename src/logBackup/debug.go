@@ -3,7 +3,6 @@ package logBackup
 import (
 	"os"
 	"runtime"
-	"strings"
 	"fmt"
 )
 
@@ -13,10 +12,8 @@ func Debugf(format string, a ...interface{}) {
 		if !ok {
 			file = "<unknown>"
 			line = -1
-		} else {
-			file = file[strings.LastIndex(file, "/")+1:]
 		}
 
-		fmt.Fprintf(os.Stderr, fmt.Sprintf("[%d] [debug] %s:%d %s\n", os.Getpid(), file, line, format), a...)
+		fmt.Fprintf(os.Stderr, fmt.Sprintf("[%d] %s:%d %s\n", os.Getpid(), file, line, format), a...)
 	}
 }

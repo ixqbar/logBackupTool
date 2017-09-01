@@ -16,16 +16,14 @@ import (
 
 type Server struct {
 	addr       string
-	backupPath string
 	socket     *net.TCPListener
 	cm         *ConnManager
 }
 
-func NewServer(config *Config) (*Server, error) {
-	Debugf("server run %s %s", config.Addr, config.BackupPath)
+func NewServer() (*Server, error) {
+	Debugf("server will running at %s", GloablConfig.Addr)
 	return &Server{
-		addr       : config.Addr,
-		backupPath : config.BackupPath,
+		addr       : GloablConfig.Addr,
 		socket     : nil,
 		cm         : NewConnManager(),
 	}, nil
@@ -146,13 +144,7 @@ func (srv *Server) handleConn(conn net.Conn) {
 		}
 
 		fname := strings.Trim(strings.Join(summaryInfo[:summaryLen-2], "@"), "@")
-
-		fileName := ""
-		if len(fpath) > 0 {
-			fileName = path.Join(srv.backupPath, fpath, fname)
-		} else {
-			fileName = path.Join(srv.backupPath, fname)
-		}
+		fileName := path.Join(GloablConfig.BackupPath, fpath, fname)
 
 		Debugf("%s backup file %s size %d", clientAddr, fileName, fsize)
 
@@ -167,7 +159,7 @@ func (srv *Server) handleConn(conn net.Conn) {
 			os.Remove(fileName)
 		}
 
-		f, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		f, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0755)
 		if err != nil {
 			Debugf("%s open file %s failed %v", clientAddr, fileName, err)
 			break
@@ -191,6 +183,12 @@ func (srv *Server) handleConn(conn net.Conn) {
 		}
 
 		f.Close()
+
+		if GloablConfig.ToChown {
+			go func() {
+				ChownR(GloablConfig.BackupPath, GloablConfig.Uid, GloablConfig.Gid)
+			}()
+		}
 
 		conn.Write([]byte("OK\r\n"))
 	}
