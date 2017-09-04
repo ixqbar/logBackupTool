@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"regexp"
 	"runtime"
-	"strings"
 	"syscall"
 	"strconv"
 	"os/user"
@@ -151,17 +150,9 @@ func main() {
 
 		saveRelativePath := *optionClientPath
 		if len(saveRelativePath) > 0 {
-			if matched, err := regexp.Match(`^[0-9a-zA-Z\-_]{1,}$`, []byte(saveRelativePath)); err != nil || !matched {
+			if matched, err := regexp.Match(`^[0-9a-zA-Z\-_/]{1,}$`, []byte(saveRelativePath)); err != nil || !matched {
 				fmt.Printf("Sorry, transfer file path is invalide\n")
 				os.Exit(1)
-			}
-
-			if strings.HasPrefix(saveRelativePath, "/") {
-				saveRelativePath = saveRelativePath[1:]
-			}
-
-			if strings.HasSuffix(saveRelativePath, "/") == false {
-				saveRelativePath = saveRelativePath + "/"
 			}
 		}
 

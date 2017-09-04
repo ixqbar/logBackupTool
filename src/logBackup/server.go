@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"io"
 	"path"
+	"regexp"
 )
 
 type Server struct {
@@ -124,9 +125,17 @@ func (srv *Server) handleConn(conn net.Conn) {
 			}
 		}
 
+		//文件相对路径
 		fpath := summaryInfo[summaryLen-1]
-		fsize := 0
+		if len(fpath) > 0 {
+			if matched, err := regexp.Match(`^[0-9a-zA-Z\-_/]{1,}$`, []byte(fpath)); err != nil || !matched {
+				Debugf("Sorry, transfer file path is invalide\n")
+				break
+			}
+		}
 
+		//文件大小
+		fsize := 0
 		if len(summaryInfo[summaryLen-2]) > 0 {
 			num, err := strconv.Atoi(summaryInfo[summaryLen-2])
 			if err != nil {
@@ -143,7 +152,10 @@ func (srv *Server) handleConn(conn net.Conn) {
 			break
 		}
 
+		//避免文件名包含@
 		fname := strings.Trim(strings.Join(summaryInfo[:summaryLen-2], "@"), "@")
+
+		//文件保存路径
 		fileName := path.Join(GloablConfig.BackupPath, fpath, fname)
 
 		Debugf("%s backup file %s size %d", clientAddr, fileName, fsize)
