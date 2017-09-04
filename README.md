@@ -25,6 +25,9 @@ Options:
 [server]
 bind-address=127.0.0.1:2010
 datadir=/Users/xingqiba/workspace/go/logBackupTool/logs
+user=nobody
+group=nobody
+perm=0755
 
 [client]
 server-address=127.0.0.1:2010
