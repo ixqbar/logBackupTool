@@ -98,12 +98,14 @@ func (srv *Server) handleConn(conn net.Conn) {
 		conn.Close()
 	}()
 
+	data := make([]byte, 1024)
+	r := bufio.NewReader(conn)
+
 	//file size path\r\n
 	//data
 	for {
 		conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(30)))
 
-		r := bufio.NewReader(conn)
 		content, err := r.ReadString('\n')
 		if err != nil {
 			if err != io.EOF {
@@ -166,18 +168,13 @@ func (srv *Server) handleConn(conn net.Conn) {
 				Debugf("%s creaet folder %s failed %v", clientAddr, parentDir, err)
 				break
 			}
-		} else if _, err := os.Stat(fileName); err == nil {
-			Debugf("%s target file %s exists", clientAddr, fileName)
-			os.Remove(fileName)
 		}
 
-		f, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, GloablConfig.Perm)
+		f, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, GloablConfig.Perm)
 		if err != nil {
 			Debugf("%s open file %s failed %v", clientAddr, fileName, err)
 			break
 		}
-
-		data := make([]byte, 1024)
 
 		m := 0
 		for {
@@ -202,7 +199,13 @@ func (srv *Server) handleConn(conn net.Conn) {
 			}()
 		}
 
-		conn.Write([]byte("OK\r\n"))
+		if m >= fsize {
+			conn.Write([]byte("OK\r\n"))
+		} else {
+			conn.Write([]byte("ERROR\r\n"))
+			break
+		}
+		r.Reset(conn)
 	}
 
 }
