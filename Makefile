@@ -12,4 +12,4 @@ win:
 	GOOS=windows GOARCH=amd64 go build -o ./bin/${TARGET}_${@} ./src
 	
 clean:
-	rm -rf ../bin/${TARGET}_*
+	rm -rf ./bin/${TARGET}_*
