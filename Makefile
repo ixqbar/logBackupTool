@@ -9,7 +9,7 @@ mac:
 	GOOS=darwin GOARCH=amd64 go build -o ./bin/${TARGET}_${@} ./src
 
 win:
-	GOOS=windows GOARCH=amd64 go build -o ./bin/${TARGET}_${@} ./src
+	GOOS=windows GOARCH=amd64 go build -o ./bin/${TARGET}.exe ./src
 	
 clean:
 	rm -rf ./bin/${TARGET}_*
