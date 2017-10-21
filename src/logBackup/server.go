@@ -13,6 +13,8 @@ import (
 	"io"
 	"path"
 	"regexp"
+	"crypto/md5"
+	"encoding/hex"
 )
 
 type Server struct {
@@ -114,9 +116,11 @@ func (srv *Server) handleConn(conn net.Conn) {
 			break
 		}
 
+		//ping     PING@
+		//transfer FILE_NAME@FILE_SIZE@md5sum@PATH
 		summaryInfo := strings.Split(strings.Trim(content, "\r\n"), "@")
 		summaryLen := len(summaryInfo)
-		if summaryLen < 3 {
+		if summaryLen < 4 {
 			if summaryInfo[0] == "PING" {
 				conn.Write([]byte("PONG\r\n"))
 				continue
@@ -131,15 +135,18 @@ func (srv *Server) handleConn(conn net.Conn) {
 		fpath := summaryInfo[summaryLen-1]
 		if len(fpath) > 0 {
 			if matched, err := regexp.Match(`^[0-9a-zA-Z\-_/]{1,}$`, []byte(fpath)); err != nil || !matched {
-				Debugf("Sorry, transfer file path is invalide\n")
+				Debugf("Sorry, transfer file path is invalid\n")
 				break
 			}
 		}
 
+		//文件md5校验码
+		fsum := summaryInfo[summaryLen-2]
+
 		//文件大小
 		fsize := 0
-		if len(summaryInfo[summaryLen-2]) > 0 {
-			num, err := strconv.Atoi(summaryInfo[summaryLen-2])
+		if len(summaryInfo[summaryLen-3]) > 0 {
+			num, err := strconv.Atoi(summaryInfo[summaryLen-3])
 			if err != nil {
 				Debugf("%s parse transfer header failed %s %s", clientAddr, content, err)
 				conn.Write([]byte("parse transfer header failed error size\r\n"))
@@ -155,12 +162,12 @@ func (srv *Server) handleConn(conn net.Conn) {
 		}
 
 		//避免文件名包含@
-		fname := strings.Trim(strings.Join(summaryInfo[:summaryLen-2], "@"), "@")
+		fname := strings.Trim(strings.Join(summaryInfo[:summaryLen-3], "@"), "@")
 
 		//文件保存路径
 		fileName := path.Join(GloablConfig.BackupPath, fpath, fname)
 
-		Debugf("%s backup file %s size %d", clientAddr, fileName, fsize)
+		Debugf("%s backup file %s size %d md5sum %s", clientAddr, fileName, fsize, fsum)
 
 		parentDir := filepath.Dir(fileName)
 		if _, err := os.Stat(parentDir); os.IsNotExist(err) {
@@ -170,12 +177,36 @@ func (srv *Server) handleConn(conn net.Conn) {
 			}
 		}
 
+		fi, err := os.Stat(fileName)
+		if err == nil && fi.Size() > 0 {
+			t, err := os.Open(fileName)
+			if err == nil {
+				h := md5.New()
+				if _, err := io.Copy(h, t); err != nil {
+					t.Close()
+					Debugf("Get file %s md5sum failed %v", fileName, err)
+					break
+				}
+
+				ms := hex.EncodeToString(h.Sum(nil))
+				Debugf("Get file %s md5sum %s", fileName, ms)
+
+				t.Close()
+				if ms == fsum {
+					Debugf("Transfer file %s has same md5sum %s", fileName, ms)
+					conn.Write([]byte("OK\r\n"))
+					break
+				}
+			}
+		}
+
 		f, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, GloablConfig.Perm)
 		if err != nil {
 			Debugf("%s open file %s failed %v", clientAddr, fileName, err)
 			break
 		}
 
+		h := md5.New()
 		m := 0
 		for {
 			conn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(180)))
@@ -184,12 +215,15 @@ func (srv *Server) handleConn(conn net.Conn) {
 				break;
 			}
 
+			h.Write(data[:n])
 			f.Write(data[:n])
 			m += n
 			if m >= fsize {
 				break
 			}
 		}
+
+		ms := hex.EncodeToString(h.Sum(nil))
 
 		f.Close()
 
@@ -199,13 +233,14 @@ func (srv *Server) handleConn(conn net.Conn) {
 			}()
 		}
 
-		if m >= fsize {
+		if m == fsize && ms == fsum {
+			Debugf("Transfer file %s success md5sum %s size %d", fileName, ms, m)
 			conn.Write([]byte("OK\r\n"))
 		} else {
+			Debugf("Transfer file %s failed md5sum %s size %d", fileName, ms, m)
 			conn.Write([]byte("ERROR\r\n"))
 			break
 		}
-		r.Reset(conn)
 	}
 
 }

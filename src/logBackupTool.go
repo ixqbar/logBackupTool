@@ -169,7 +169,10 @@ func main() {
 			os.Exit(1)
 		}
 
-		logBackup.Transerf(addr, *optionClientFile, saveRelativePath, *optionClientName)
+		err := logBackup.Transfer(addr, *optionClientFile, saveRelativePath, *optionClientName)
+		if err != nil {
+			fmt.Printf("Sorry, Transfer failed %s\n", err.Error())
+		}
 	}
 
 	os.Exit(0)
