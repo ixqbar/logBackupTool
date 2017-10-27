@@ -200,9 +200,10 @@ func (srv *Server) handleConn(conn net.Conn) {
 			}
 		}
 
-		f, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, GloablConfig.Perm)
+		tmpFileName := fmt.Sprintf("%s.tmp", fileName)
+		f, err := os.OpenFile(tmpFileName, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, GloablConfig.Perm)
 		if err != nil {
-			Debugf("%s open file %s failed %v", clientAddr, fileName, err)
+			Debugf("%s open file %s failed %v", clientAddr, tmpFileName, err)
 			break
 		}
 
@@ -226,6 +227,13 @@ func (srv *Server) handleConn(conn net.Conn) {
 		ms := hex.EncodeToString(h.Sum(nil))
 
 		f.Close()
+
+		err = os.Rename(tmpFileName, fileName)
+		if err != nil {
+			Debugf("Rename file %s failed %v", tmpFileName, err)
+			conn.Write([]byte("ERROR\r\n"))
+			break
+		}
 
 		if GloablConfig.ToChown {
 			go func() {
