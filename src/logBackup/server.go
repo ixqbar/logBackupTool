@@ -24,7 +24,7 @@ type Server struct {
 }
 
 func NewServer() (*Server, error) {
-	Debugf("server will running at %s", GloablConfig.Addr)
+	Logger.Printf("server will running at %s", GloablConfig.Addr)
 	return &Server{
 		addr       : GloablConfig.Addr,
 		socket     : nil,
@@ -40,7 +40,7 @@ func (srv *Server) Start() error {
 
 	sock, err := net.ListenTCP("tcp", addr)
 	if err != nil {
-		Debugf("server run %s failed %s", srv.addr, err)
+		Logger.Printf("server run %s failed %s", srv.addr, err)
 		return fmt.Errorf("fail to listen tcp: %v", err)
 	}
 
@@ -93,10 +93,10 @@ func (srv *Server)acceptConn() error {
 
 func (srv *Server) handleConn(conn net.Conn) {
 	var clientAddr = conn.RemoteAddr().String()
-	Debugf("%s connected", clientAddr)
+	Logger.Printf("%s connected", clientAddr)
 
 	defer func() {
-		Debugf("%s disconnected", clientAddr)
+		Logger.Printf("%s disconnected", clientAddr)
 		conn.Close()
 	}()
 
@@ -111,7 +111,7 @@ func (srv *Server) handleConn(conn net.Conn) {
 		content, err := r.ReadString('\n')
 		if err != nil {
 			if err != io.EOF {
-				Debugf("%s parse transfer header failed %v", clientAddr, err)
+				Logger.Printf("%s parse transfer header failed %v", clientAddr, err)
 			}
 			break
 		}
@@ -125,7 +125,7 @@ func (srv *Server) handleConn(conn net.Conn) {
 				conn.Write([]byte("PONG\r\n"))
 				continue
 			} else {
-				Debugf("%s parse transfer header failed %s", clientAddr, content)
+				Logger.Printf("%s parse transfer header failed %s", clientAddr, content)
 				conn.Write([]byte("parse transfer header failed\r\n"))
 				break
 			}
@@ -135,7 +135,7 @@ func (srv *Server) handleConn(conn net.Conn) {
 		fpath := summaryInfo[summaryLen-1]
 		if len(fpath) > 0 {
 			if matched, err := regexp.Match(`^[0-9a-zA-Z\-_/]{1,}$`, []byte(fpath)); err != nil || !matched {
-				Debugf("Sorry, transfer file path is invalid\n")
+				Logger.Printf("Sorry, transfer file path is invalid\n")
 				break
 			}
 		}
@@ -148,7 +148,7 @@ func (srv *Server) handleConn(conn net.Conn) {
 		if len(summaryInfo[summaryLen-3]) > 0 {
 			num, err := strconv.Atoi(summaryInfo[summaryLen-3])
 			if err != nil {
-				Debugf("%s parse transfer header failed %s %s", clientAddr, content, err)
+				Logger.Printf("%s parse transfer header failed %s %s", clientAddr, content, err)
 				conn.Write([]byte("parse transfer header failed error size\r\n"))
 				break
 			}
@@ -156,7 +156,7 @@ func (srv *Server) handleConn(conn net.Conn) {
 		}
 
 		if fsize == 0 {
-			Debugf("%s parse transfer header failed %s error size", clientAddr, content)
+			Logger.Printf("%s parse transfer header failed %s error size", clientAddr, content)
 			conn.Write([]byte("parse transfer header failed error size\r\n"))
 			break
 		}
@@ -167,12 +167,12 @@ func (srv *Server) handleConn(conn net.Conn) {
 		//文件保存路径
 		fileName := path.Join(GloablConfig.BackupPath, fpath, fname)
 
-		Debugf("%s backup file %s size %d md5sum %s", clientAddr, fileName, fsize, fsum)
+		Logger.Printf("%s backup file %s size %d md5sum %s", clientAddr, fileName, fsize, fsum)
 
 		parentDir := filepath.Dir(fileName)
 		if _, err := os.Stat(parentDir); os.IsNotExist(err) {
 			if err := os.MkdirAll(parentDir, GloablConfig.Perm); err != nil {
-				Debugf("%s creaet folder %s failed %v", clientAddr, parentDir, err)
+				Logger.Printf("%s creaet folder %s failed %v", clientAddr, parentDir, err)
 				break
 			}
 		}
@@ -184,16 +184,16 @@ func (srv *Server) handleConn(conn net.Conn) {
 				h := md5.New()
 				if _, err := io.Copy(h, t); err != nil {
 					t.Close()
-					Debugf("Get file %s md5sum failed %v", fileName, err)
+					Logger.Printf("Get file %s md5sum failed %v", fileName, err)
 					break
 				}
 
 				ms := hex.EncodeToString(h.Sum(nil))
-				Debugf("Get file %s md5sum %s", fileName, ms)
+				Logger.Printf("Get file %s md5sum %s", fileName, ms)
 
 				t.Close()
 				if ms == fsum {
-					Debugf("Transfer file %s has same md5sum %s", fileName, ms)
+					Logger.Printf("Transfer file %s has same md5sum %s", fileName, ms)
 					conn.Write([]byte("OK\r\n"))
 					break
 				}
@@ -203,7 +203,7 @@ func (srv *Server) handleConn(conn net.Conn) {
 		tmpFileName := fmt.Sprintf("%s.tmp", fileName)
 		f, err := os.OpenFile(tmpFileName, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, GloablConfig.Perm)
 		if err != nil {
-			Debugf("%s open file %s failed %v", clientAddr, tmpFileName, err)
+			Logger.Printf("%s open file %s failed %v", clientAddr, tmpFileName, err)
 			break
 		}
 
@@ -230,7 +230,7 @@ func (srv *Server) handleConn(conn net.Conn) {
 
 		err = os.Rename(tmpFileName, fileName)
 		if err != nil {
-			Debugf("Rename file %s failed %v", tmpFileName, err)
+			Logger.Printf("Rename file %s failed %v", tmpFileName, err)
 			conn.Write([]byte("ERROR\r\n"))
 			break
 		}
@@ -242,10 +242,10 @@ func (srv *Server) handleConn(conn net.Conn) {
 		}
 
 		if m == fsize && ms == fsum {
-			Debugf("Transfer file %s success md5sum %s size %d", fileName, ms, m)
+			Logger.Printf("Transfer file %s success md5sum %s size %d", fileName, ms, m)
 			conn.Write([]byte("OK\r\n"))
 		} else {
-			Debugf("Transfer file %s failed md5sum %s size %d", fileName, ms, m)
+			Logger.Printf("Transfer file %s failed md5sum %s size %d", fileName, ms, m)
 			conn.Write([]byte("ERROR\r\n"))
 			break
 		}

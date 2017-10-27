@@ -16,14 +16,12 @@ Options:
     	set send file to server backup path
   -server
     	run as server mode
-  -verbose
-    	show run details
 ```
 
 ### logBackup.conf
 ```
 [server]
-bind-address=127.0.0.1:2010
+bind-address=0.0.0.0:2010
 datadir=/Users/xingqiba/workspace/go/logBackupTool/logs
 user=nobody
 group=nobody

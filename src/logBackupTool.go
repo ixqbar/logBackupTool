@@ -19,7 +19,6 @@ var optionIsClient = flag.Bool("client", true, "run as client mode")
 var optionClientFile = flag.String("file", "", "set send file to server")
 var optionClientPath = flag.String("path", "", "set send file to server backup path")
 var optionClientName = flag.String("name", "", "rename send file to server backup path")
-var optionVerbose = flag.Bool("verbose", false, `show run details`)
 
 func usage() {
 	fmt.Printf("Usage: %s [options]\nOptions:\n", os.Args[0])
@@ -32,10 +31,6 @@ func main() {
 
 	flag.Usage = usage
 	flag.Parse()
-
-	if *optionVerbose {
-		os.Setenv("DEBUG", "ok")
-	}
 
 	file, err := logBackup.LoadFile(*optionConfig)
 	if err != nil {
@@ -122,7 +117,7 @@ func main() {
 			logBackup.GloablConfig.Perm = os.FileMode(perm)
 		}()
 
-		logBackup.Debugf("server will backup file permissions with %d:%d %s", logBackup.GloablConfig.Uid, logBackup.GloablConfig.Uid, logBackup.GloablConfig.Perm)
+		logBackup.Logger.Printf("server will backup file permissions with %d:%d %s", logBackup.GloablConfig.Uid, logBackup.GloablConfig.Uid, logBackup.GloablConfig.Perm)
 
 		server, err := logBackup.NewServer()
 

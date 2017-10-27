@@ -10,7 +10,7 @@ func ChownR(path string, uid, gid int) (error) {
 		if err == nil {
 			err = Chown(name, uid, gid)
 		} else {
-			Debugf("walk %s failed %s", name, err)
+			Logger.Printf("walk %s failed %s", name, err)
 		}
 		return err
 	})
@@ -19,7 +19,7 @@ func ChownR(path string, uid, gid int) (error) {
 func Chown(name string ,uid, gid int) (error) {
 	err := os.Chown(name, uid, gid)
 	if err != nil {
-		Debugf("chown %s failed", name, err)
+		Logger.Printf("chown %s failed", name, err)
 	}
 
 	return err
