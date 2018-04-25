@@ -83,7 +83,7 @@ func (srv *Server)acceptConn() error {
 
 		go func() {
 			srv.cm.Add(1)
-			srv.handleConn(conn)
+			srv.handleConn(&FConn{conn:conn})
 			srv.cm.Done()
 		}()
 	}
@@ -91,8 +91,8 @@ func (srv *Server)acceptConn() error {
 	return nil
 }
 
-func (srv *Server) handleConn(conn net.Conn) {
-	var clientAddr = conn.RemoteAddr().String()
+func (srv *Server) handleConn(conn *FConn) {
+	var clientAddr = conn.ClientAddress()
 	Logger.Printf("%s connected", clientAddr)
 
 	defer func() {
@@ -112,6 +112,7 @@ func (srv *Server) handleConn(conn net.Conn) {
 		if err != nil {
 			if err != io.EOF {
 				Logger.Printf("%s parse transfer header failed %v", clientAddr, err)
+				conn.Write([]byte("ERROR\r\n"))
 			}
 			break
 		}
@@ -136,6 +137,7 @@ func (srv *Server) handleConn(conn net.Conn) {
 		if len(fpath) > 0 {
 			if matched, err := regexp.Match(`^[0-9a-zA-Z\-_/]{1,}$`, []byte(fpath)); err != nil || !matched {
 				Logger.Printf("Sorry, transfer file path is invalid\n")
+				conn.Write([]byte("ERROR\r\n"))
 				break
 			}
 		}
@@ -172,7 +174,8 @@ func (srv *Server) handleConn(conn net.Conn) {
 		parentDir := filepath.Dir(fileName)
 		if _, err := os.Stat(parentDir); os.IsNotExist(err) {
 			if err := os.MkdirAll(parentDir, GloablConfig.Perm); err != nil {
-				Logger.Printf("%s creaet folder %s failed %v", clientAddr, parentDir, err)
+				Logger.Printf("%s create folder %s failed %v", clientAddr, parentDir, err)
+				conn.Write([]byte("ERROR\r\n"))
 				break
 			}
 		}
@@ -185,6 +188,7 @@ func (srv *Server) handleConn(conn net.Conn) {
 				if _, err := io.Copy(h, t); err != nil {
 					t.Close()
 					Logger.Printf("Get file %s md5sum failed %v", fileName, err)
+					conn.Write([]byte("ERROR\r\n"))
 					break
 				}
 
@@ -204,6 +208,7 @@ func (srv *Server) handleConn(conn net.Conn) {
 		f, err := os.OpenFile(tmpFileName, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, GloablConfig.Perm)
 		if err != nil {
 			Logger.Printf("%s open file %s failed %v", clientAddr, tmpFileName, err)
+			conn.Write([]byte("ERROR\r\n"))
 			break
 		}
 
@@ -250,5 +255,4 @@ func (srv *Server) handleConn(conn net.Conn) {
 			break
 		}
 	}
-
 }
