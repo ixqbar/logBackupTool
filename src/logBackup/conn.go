@@ -18,6 +18,7 @@ func (obj FConn) Write(message []byte) bool {
 	writeLen := 0
 
 	for {
+		obj.conn.SetWriteDeadline(time.Now().Add(time.Second * time.Duration(30)))
 		n, err := obj.conn.Write(message[writeLen:])
 		if err != nil {
 			Logger.Printf("server write client message %s failed %s", string(message), err)

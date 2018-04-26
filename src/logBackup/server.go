@@ -81,11 +81,11 @@ func (srv *Server)acceptConn() error {
 			continue
 		}
 
-		go func() {
+		go func(conn net.Conn) {
 			srv.cm.Add(1)
 			srv.handleConn(&FConn{conn:conn})
 			srv.cm.Done()
-		}()
+		}(conn)
 	}
 
 	return nil
@@ -97,7 +97,10 @@ func (srv *Server) handleConn(conn *FConn) {
 
 	defer func() {
 		Logger.Printf("%s disconnected", clientAddr)
-		conn.Close()
+		err := conn.Close()
+		if err != nil {
+			Logger.Printf("%s disconnected error %s", clientAddr, err)
+		}
 	}()
 
 	data := make([]byte, 1024)
@@ -198,10 +201,14 @@ func (srv *Server) handleConn(conn *FConn) {
 				t.Close()
 				if ms == fsum {
 					Logger.Printf("Transfer file %s has same md5sum %s", fileName, ms)
-					conn.Write([]byte("OK\r\n"))
-					break
+					conn.Write([]byte("ALL_SAME\r\n"))
+					continue;
 				}
+			} else {
+				Logger.Printf("Stat file %s failed %s", fileName, err)
 			}
+		} else {
+			conn.Write([]byte("CONTINUE\r\n"))
 		}
 
 		tmpFileName := fmt.Sprintf("%s.tmp", fileName)

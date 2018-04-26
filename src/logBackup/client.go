@@ -10,6 +10,7 @@ import (
 	"io"
 	"encoding/hex"
 	"github.com/syndtr/goleveldb/leveldb/errors"
+	"time"
 )
 // name 文件新名称
 func Transfer(server string, file string, path string, name string) error {
@@ -66,6 +67,43 @@ func Transfer(server string, file string, path string, name string) error {
 		if n >= headerLen {
 			break
 		}
+	}
+
+	//CONTINUE\r\n
+	//ALL_SAME\r\n
+
+	headerRespMinLen := 10
+	headerRespByte := make([]byte, headerRespMinLen)
+	headerRespReadLen := 0
+
+	for {
+		conn.SetWriteDeadline(time.Now().Add(time.Second * time.Duration(30)))
+		n, err := conn.Read(headerRespByte)
+		if err != nil {
+			Logger.Printf("Transfer target server %s with header response failed %v", server, err)
+			return err
+		}
+
+		headerRespReadLen += n
+		if headerRespReadLen >= headerRespMinLen {
+			break
+		}
+	}
+
+	if headerRespReadLen < headerRespMinLen {
+		Logger.Printf("Transfer target server %s with header response failed %v", server, err)
+		return err
+	}
+
+	headerRespMessage := strings.Trim(string(headerRespByte[:headerRespReadLen]), "\r\n")
+	if headerRespMessage == "ALL_SAME" {
+		Logger.Printf("Transfer target server %s all_same", server)
+		return nil
+	}
+
+	if headerRespMessage != "CONTINUE" {
+		Logger.Printf("Transfer target server %s with header response [%s] failed %v", server, headerRespMessage, err)
+		return errors.New("error transfer header response")
 	}
 
 	bar := pb.New64(fi.Size())
