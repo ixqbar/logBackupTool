@@ -190,27 +190,27 @@ func (srv *Server) handleConn(conn *FConn) {
 				h := md5.New()
 				if _, err := io.Copy(h, t); err != nil {
 					t.Close()
-					Logger.Printf("Get file %s md5sum failed %v", fileName, err)
+					Logger.Printf("%s Get file %s md5sum failed %v", clientAddr, fileName, err)
 					conn.Write([]byte("ERROR\r\n"))
 					break
 				}
 
 				ms := hex.EncodeToString(h.Sum(nil))
-				Logger.Printf("Get file %s md5sum %s", fileName, ms)
+				Logger.Printf("%s Get file %s md5sum %s", clientAddr, fileName, ms)
 
 				t.Close()
 				if ms == fsum {
-					Logger.Printf("Transfer file %s has same md5sum %s", fileName, ms)
+					Logger.Printf("%s Transfer file %s has same md5sum %s", clientAddr, fileName, ms)
 					conn.Write([]byte("ALL_SAME\r\n"))
 					continue;
 				} else {
-					Logger.Printf("Stat file %s md5sum not same and will transfer file data", fileName)
+					Logger.Printf("%s Stat file %s md5sum not same and will transfer file data", clientAddr, fileName)
 				}
 			} else {
-				Logger.Printf("Stat file %s failed %v and will transfer file data", fileName, err)
+				Logger.Printf("%s Stat file %s failed %v and will transfer file data", clientAddr, fileName, err)
 			}
 		} else {
-			Logger.Printf("Stat file %s failed %v and will transfer file data", fileName, err)
+			Logger.Printf("%s Stat file %s failed %v and will transfer file data", clientAddr, fileName, err)
 		}
 
 		conn.Write([]byte("CONTINUE\r\n"))
@@ -246,7 +246,7 @@ func (srv *Server) handleConn(conn *FConn) {
 
 		err = os.Rename(tmpFileName, fileName)
 		if err != nil {
-			Logger.Printf("Rename file %s failed %v", tmpFileName, err)
+			Logger.Printf("%s Rename file %s failed %v", clientAddr, tmpFileName, err)
 			conn.Write([]byte("ERROR\r\n"))
 			break
 		}
@@ -258,10 +258,10 @@ func (srv *Server) handleConn(conn *FConn) {
 		}
 
 		if m == fsize && ms == fsum {
-			Logger.Printf("Transfer file %s success md5sum %s size %d", fileName, ms, m)
+			Logger.Printf("%s Transfer file %s success md5sum %s size %d", clientAddr, fileName, ms, m)
 			conn.Write([]byte("OK\r\n"))
 		} else {
-			Logger.Printf("Transfer file %s failed md5sum %s size %d", fileName, ms, m)
+			Logger.Printf("%s Transfer file %s failed md5sum %s size %d", clientAddr, fileName, ms, m)
 			conn.Write([]byte("ERROR\r\n"))
 			break
 		}
