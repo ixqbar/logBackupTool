@@ -203,13 +203,17 @@ func (srv *Server) handleConn(conn *FConn) {
 					Logger.Printf("Transfer file %s has same md5sum %s", fileName, ms)
 					conn.Write([]byte("ALL_SAME\r\n"))
 					continue;
+				} else {
+					Logger.Printf("Stat file %s md5sum not same and will transfer file data", fileName)
 				}
 			} else {
-				Logger.Printf("Stat file %s failed %s", fileName, err)
+				Logger.Printf("Stat file %s failed %v and will transfer file data", fileName, err)
 			}
 		} else {
-			conn.Write([]byte("CONTINUE\r\n"))
+			Logger.Printf("Stat file %s failed %v and will transfer file data", fileName, err)
 		}
+
+		conn.Write([]byte("CONTINUE\r\n"))
 
 		tmpFileName := fmt.Sprintf("%s.tmp", fileName)
 		f, err := os.OpenFile(tmpFileName, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, GloablConfig.Perm)
